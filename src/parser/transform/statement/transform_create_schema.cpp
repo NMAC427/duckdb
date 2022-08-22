@@ -21,6 +21,7 @@ unique_ptr<CreateStatement> Transformer::TransformCreateSchema(duckdb_libpgquery
 			switch (node->type) {
 			case duckdb_libpgquery::T_PGCreateStmt:
 			case duckdb_libpgquery::T_PGViewStmt:
+			case duckdb_libpgquery::T_PGRenameStmt:
 			default:
 				throw NotImplementedException("Schema element not supported yet!");
 			}

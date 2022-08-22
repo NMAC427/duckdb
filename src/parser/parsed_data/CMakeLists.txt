@@ -1,6 +1,8 @@
 add_library_unity(
   duckdb_parsed_data
   OBJECT
+  alter_info.cpp
+  alter_schema_info.cpp
   alter_table_info.cpp
   create_info.cpp
   create_index_info.cpp

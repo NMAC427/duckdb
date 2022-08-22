@@ -9,6 +9,8 @@
 #pragma once
 
 #include "duckdb/parser/column_definition.hpp"
+#include "duckdb/parser/parsed_data/alter_info.hpp"
+#include "duckdb/parser/parsed_data/alter_schema_info.hpp"
 #include "duckdb/parser/parsed_data/alter_table_info.hpp"
 #include "duckdb/parser/sql_statement.hpp"
 
