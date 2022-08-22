@@ -48,7 +48,7 @@ public:
 
 private:
 	//! The catalog set holding the tables
-	CatalogSet tables;
+	std::shared_ptr<CatalogSet> tables;
 	//! The catalog set holding the indexes
 	CatalogSet indexes;
 	//! The catalog set holding the table functions
@@ -67,6 +67,8 @@ private:
 	CatalogSet types;
 
 public:
+	unique_ptr<CatalogEntry> AlterEntry(ClientContext &context, AlterInfo *info) override;
+
 	//! Scan the specified catalog set, invoking the callback method for every entry
 	void Scan(ClientContext &context, CatalogType type, const std::function<void(CatalogEntry *)> &callback);
 	//! Scan the specified catalog set, invoking the callback method for every committed entry
@@ -78,6 +80,10 @@ public:
 	static unique_ptr<CreateSchemaInfo> Deserialize(Deserializer &source);
 
 	string ToSQL() override;
+
+	unique_ptr<CatalogEntry> Copy(ClientContext &context) override;
+
+	void SetAsRoot() override;
 
 	//! Creates an index with the given name in the schema
 	CatalogEntry *CreateIndex(ClientContext &context, CreateIndexInfo *info, TableCatalogEntry *table);

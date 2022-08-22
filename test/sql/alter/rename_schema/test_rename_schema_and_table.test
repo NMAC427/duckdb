@@ -1,0 +1,140 @@
+# name: test/sql/alter/rename_schema/test_rename_schema_and_table.test
+# description: Test RENAME SCHEMA single transaction
+# group: [rename_schema]
+
+# can't rename schema that doesn't exist
+statement error
+ALTER SCHEMA the_void RENAME TO the_universe;
+
+statement ok
+CREATE SCHEMA s;
+
+statement ok
+CREATE TABLE s.hello(i INTEGER);
+
+# rename schema and table
+statement ok
+BEGIN TRANSACTION
+
+statement ok
+ALTER TABLE s.hello RENAME TO hello2;
+
+statement ok
+ALTER SCHEMA s RENAME TO s2;
+
+statement ok
+SELECT * FROM s2.hello2;
+
+statement ok
+ALTER TABLE s2.hello2 RENAME TO hello;
+
+statement ok
+SELECT * FROM s2.hello;
+
+statement error
+SELECT * FROM s.hello;
+
+statement error
+DROP SCHEMA s CASCADE;
+
+statement ok
+DROP SCHEMA s2 CASCADE;
+
+statement ok
+ROLLBACK
+
+statement ok
+SELECT * FROM s.hello;
+
+statement ok
+BEGIN TRANSACTION
+
+statement ok
+ALTER SCHEMA s RENAME TO s2;
+
+statement ok
+ALTER TABLE s2.hello RENAME TO tbl
+
+statement ok
+COMMIT
+
+statement ok
+SELECT * FROM s2.tbl;
+
+# multiple renames in the same transaction
+statement ok
+BEGIN TRANSACTION
+
+statement ok
+ALTER SCHEMA s2 RENAME TO s3
+
+statement ok
+ALTER SCHEMA s3 RENAME TO s4
+
+statement ok
+ALTER SCHEMA s4 RENAME TO s5
+
+statement error
+SELECT * FROM s4.tbl;
+
+statement ok
+SELECT * FROM s5.tbl;
+
+statement ok
+ROLLBACK
+
+# everything was rolled back
+statement ok
+SELECT * FROM s2.tbl;
+
+statement error
+SELECT * FROM s5.tbl;
+
+statement ok
+BEGIN TRANSACTION
+
+statement ok
+ALTER SCHEMA s2 RENAME TO s3
+
+statement error
+ALTER SCHEMA s2 RENAME TO s4
+
+statement ok
+ALTER SCHEMA s3 RENAME TO s4
+
+statement ok
+ALTER SCHEMA s4 RENAME TO s5
+
+statement error
+SELECT * FROM s4.tbl;
+
+statement ok
+SELECT * FROM s5.tbl;
+
+statement ok
+COMMIT
+
+# everything was committed
+statement error
+SELECT * FROM s2.tbl
+
+statement ok
+SELECT * FROM s5.tbl
+
+# we can create these schemas again
+statement ok
+CREATE SCHEMA s2;
+
+statement ok
+CREATE SCHEMA s3;
+
+statement ok
+CREATE SCHEMA s4;
+
+
+
+
+# THIS TEST FAILS FOR SOME REASON
+statement ok
+ALTER TABLE s5.tbl RENAME TO hello2;
+

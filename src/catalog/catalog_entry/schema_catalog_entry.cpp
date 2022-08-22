@@ -16,6 +16,7 @@
 #include "duckdb/catalog/default/default_functions.hpp"
 #include "duckdb/catalog/default/default_views.hpp"
 #include "duckdb/common/exception.hpp"
+#include "duckdb/parser/parsed_data/alter_schema_info.hpp"
 #include "duckdb/parser/parsed_data/alter_table_info.hpp"
 #include "duckdb/parser/parsed_data/create_collation_info.hpp"
 #include "duckdb/parser/parsed_data/create_copy_function_info.hpp"
@@ -67,8 +68,8 @@ void FindForeignKeyInformation(CatalogEntry *entry, AlterForeignKeyType alter_fk
 
 SchemaCatalogEntry::SchemaCatalogEntry(Catalog *catalog, string name_p, bool internal)
     : CatalogEntry(CatalogType::SCHEMA_ENTRY, catalog, move(name_p)),
-      tables(*catalog, make_unique<DefaultViewGenerator>(*catalog, this)), indexes(*catalog), table_functions(*catalog),
-      copy_functions(*catalog), pragma_functions(*catalog),
+      tables(make_shared<CatalogSet>(*catalog, make_unique<DefaultViewGenerator>(*catalog, this))), indexes(*catalog),
+      table_functions(*catalog), copy_functions(*catalog), pragma_functions(*catalog),
       functions(*catalog, make_unique<DefaultFunctionGenerator>(*catalog, this)), sequences(*catalog),
       collations(*catalog), types(*catalog, make_unique<DefaultTypeGenerator>(*catalog, this)) {
 	this->internal = internal;
@@ -288,6 +289,27 @@ void SchemaCatalogEntry::Alter(ClientContext &context, AlterInfo *info) {
 	}
 }
 
+unique_ptr<CatalogEntry> SchemaCatalogEntry::AlterEntry(ClientContext &context, AlterInfo *info) {
+	auto rename_info = (RenameSchemaInfo *)info;
+	auto copied_entry = Copy(context);
+
+	{
+		SchemaCatalogEntry *copied_schema = (SchemaCatalogEntry *)copied_entry.get();
+
+		copied_schema->name = rename_info->new_schema_name;
+		copied_schema->tables = tables;
+
+		copied_schema->tables->Scan(context, [copied_schema](CatalogEntry *entry) {
+			// Update the schema the tabels refer to
+			auto standard_entry = (StandardEntry *)entry;
+			standard_entry->schema = copied_schema;
+		});
+	}
+
+	return copied_entry;
+	// throw NotImplementedException("ALTER SCHEMA not implemented");
+}
+
 void SchemaCatalogEntry::Scan(ClientContext &context, CatalogType type,
                               const std::function<void(CatalogEntry *)> &callback) {
 	auto &set = GetCatalogSet(type);
@@ -321,11 +343,28 @@ string SchemaCatalogEntry::ToSQL() {
 	return ss.str();
 }
 
+unique_ptr<CatalogEntry> SchemaCatalogEntry::Copy(ClientContext &context) {
+	return make_unique<SchemaCatalogEntry>(catalog, name, internal);
+}
+
+void SchemaCatalogEntry::SetAsRoot() {
+	// Revert the schema tables refer to
+	tables->Scan([this](CatalogEntry *entry) {
+        if (entry->type == CatalogType::DELETED_ENTRY) {
+            return;
+        }
+        
+		// Update the schema the tabels refer to
+		auto standard_entry = (StandardEntry *)entry;
+		standard_entry->schema = this;
+	});
+}
+
 CatalogSet &SchemaCatalogEntry::GetCatalogSet(CatalogType type) {
 	switch (type) {
 	case CatalogType::VIEW_ENTRY:
 	case CatalogType::TABLE_ENTRY:
-		return tables;
+		return *tables;
 	case CatalogType::INDEX_ENTRY:
 		return indexes;
 	case CatalogType::TABLE_FUNCTION_ENTRY:

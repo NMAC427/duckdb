@@ -1,0 +1,120 @@
+# name: test/sql/alter/rename_schema/test_rename_schema.test
+# description: Test RENAME SCHEMA single transaction
+# group: [rename_schema]
+
+# can't rename schema that doesn't exist
+statement error
+ALTER SCHEMA the_void RENAME TO the_universe;
+
+statement ok
+CREATE SCHEMA s;
+
+statement ok
+CREATE TABLE s.hello(i INTEGER);
+
+statement ok
+BEGIN TRANSACTION
+
+statement ok
+ALTER SCHEMA s RENAME TO s2;
+
+statement ok
+SELECT * FROM s2.hello;
+
+statement error
+SELECT * FROM s.hello;
+
+statement error
+DROP SCHEMA s CASCADE;
+
+statement ok
+DROP SCHEMA s2 CASCADE;
+
+statement ok
+ROLLBACK
+
+statement ok
+SELECT * FROM s.hello;
+
+statement ok
+BEGIN TRANSACTION
+
+statement ok
+ALTER SCHEMA s RENAME TO s2;
+
+statement ok
+COMMIT
+
+statement ok
+SELECT * FROM s2.hello;
+
+# multiple renames in the same transaction
+statement ok
+BEGIN TRANSACTION
+
+statement ok
+ALTER SCHEMA s2 RENAME TO s3
+
+statement ok
+ALTER SCHEMA s3 RENAME TO s4
+
+statement ok
+ALTER SCHEMA s4 RENAME TO s5
+
+statement error
+SELECT * FROM s4.hello;
+
+statement ok
+SELECT * FROM s5.hello;
+
+statement ok
+ROLLBACK
+
+# everything was rolled back
+statement ok
+SELECT * FROM s2.hello;
+
+statement error
+SELECT * FROM s5.hello;
+
+statement ok
+BEGIN TRANSACTION
+
+statement ok
+ALTER SCHEMA s2 RENAME TO s3
+
+statement error
+ALTER SCHEMA s2 RENAME TO s4
+
+statement ok
+ALTER SCHEMA s3 RENAME TO s4
+
+statement ok
+ALTER SCHEMA s4 RENAME TO s5
+
+statement error
+SELECT * FROM s4.hello;
+
+statement ok
+SELECT * FROM s5.hello;
+
+statement ok
+COMMIT
+
+# everything was committed
+statement error
+SELECT * FROM s2.hello
+
+statement ok
+SELECT * FROM s5.hello
+
+# we can create these schemas again
+statement ok
+CREATE SCHEMA s2;
+
+statement ok
+CREATE SCHEMA s3;
+
+statement ok
+CREATE SCHEMA s4;
+

@@ -9,7 +9,7 @@ namespace duckdb {
 //===--------------------------------------------------------------------===//
 
 AlterSchemaInfo::AlterSchemaInfo(AlterSchemaType type, string schema_p)
-    : AlterInfo(AlterType::ALTER_SCHEMA, move(schema_p), move(schema_p)), alter_schema_type(type) {
+    : AlterInfo(AlterType::ALTER_SCHEMA, schema_p, schema_p), alter_schema_type(type) {
 }
 AlterSchemaInfo::~AlterSchemaInfo() {
 }

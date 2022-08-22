@@ -392,6 +392,15 @@ LogicalType Catalog::GetType(ClientContext &context, const string &schema, const
 
 void Catalog::Alter(ClientContext &context, AlterInfo *info) {
 	ModifyCatalog();
+
+	CatalogType type = info->GetCatalogType();
+	if (type == CatalogType::SCHEMA_ENTRY) {
+		if (!schemas->AlterEntry(context, info->schema, info)) {
+			throw CatalogException("Failed to alter schema");
+		}
+		return;
+	}
+
 	auto lookup = LookupEntry(context, info->GetCatalogType(), info->schema, info->name, info->if_exists);
 	if (!lookup.Found()) {
 		return;

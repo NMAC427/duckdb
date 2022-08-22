@@ -196,7 +196,11 @@ bool CatalogSet::AlterEntry(ClientContext &context, const string &name, AlterInf
 		DeleteMapping(context, original_name);
 	}
 	//! Check the dependency manager to verify that there are no conflicting dependencies with this alter
-	catalog.dependency_manager->AlterObject(context, entry, value.get());
+	if (alter_info->type == AlterType::ALTER_SCHEMA) {
+		catalog.dependency_manager->TransferDependencies(entry, value.get());
+	} else {
+		catalog.dependency_manager->AlterObject(context, entry, value.get());
+	}
 
 	value->timestamp = transaction.transaction_id;
 	value->child = move(entries[entry_index]);
@@ -522,6 +526,10 @@ void CatalogSet::AdjustTableDependencies(CatalogEntry *entry) {
 		for (auto &old_column : old_table->columns) {
 			AdjustDependency(entry, new_table, old_column, true);
 		}
+	}
+
+	if (entry->type == CatalogType::SCHEMA_ENTRY && entry->parent->type == CatalogType::SCHEMA_ENTRY) {
+		catalog.dependency_manager->TransferDependencies(entry->parent, entry);
 	}
 }
 

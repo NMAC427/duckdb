@@ -21,6 +21,7 @@ class ClientContext;
 //! The DependencyManager is in charge of managing dependencies between catalog entries
 class DependencyManager {
 	friend class CatalogSet;
+	friend class SchemaCatalogEntry;
 
 public:
 	explicit DependencyManager(Catalog &catalog);
@@ -46,6 +47,7 @@ private:
 	void AddObject(ClientContext &context, CatalogEntry *object, unordered_set<CatalogEntry *> &dependencies);
 	void DropObject(ClientContext &context, CatalogEntry *object, bool cascade);
 	void AlterObject(ClientContext &context, CatalogEntry *old_obj, CatalogEntry *new_obj);
+	void TransferDependencies(CatalogEntry *old_obj, CatalogEntry *new_obj);
 	void EraseObjectInternal(CatalogEntry *object);
 };
 } // namespace duckdb

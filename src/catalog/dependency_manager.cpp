@@ -3,6 +3,7 @@
 #include "duckdb/catalog/catalog.hpp"
 #include "duckdb/catalog/catalog_entry.hpp"
 #include "duckdb/catalog/catalog_entry/table_catalog_entry.hpp"
+#include "duckdb/common/exception.hpp"
 #include "duckdb/main/client_context.hpp"
 #include "duckdb/main/database.hpp"
 #include "duckdb/parser/expression/constant_expression.hpp"
@@ -148,6 +149,42 @@ void DependencyManager::AlterObject(ClientContext &context, CatalogEntry *old_ob
 		dependents_map[dependency].insert(Dependency(new_obj, DependencyType::DEPENDENCY_OWNED_BY));
 		dependencies_map[new_obj].insert(dependency);
 	}
+}
+
+void DependencyManager::TransferDependencies(CatalogEntry *old_obj, CatalogEntry *new_obj) {
+	D_ASSERT(dependents_map.find(old_obj) != dependents_map.end());
+	D_ASSERT(dependencies_map.find(old_obj) != dependencies_map.end());
+
+	// add the new object to the dependency manager
+	auto new_dependents = dependency_set_t();
+	unordered_set<CatalogEntry *> new_dependencies;
+
+	// update dependents
+	auto &dependents = dependents_map[old_obj];
+	for (auto &dep : dependents) {
+		if (dep.dependency_type != DependencyType::DEPENDENCY_REGULAR) {
+			throw NotImplementedException("Not implemented.");
+		}
+
+		new_dependents.insert(dep);
+		dependencies_map[dep.entry].erase(old_obj);
+		dependencies_map[dep.entry].insert(new_obj);
+	}
+
+	dependents.clear();
+
+	// update dependencies
+	auto &dependencies = dependencies_map[old_obj];
+	for (auto &dependency : dependencies) {
+		dependents_map[dependency].erase(old_obj);
+		dependents_map[dependency].insert(new_obj);
+		new_dependencies.insert(dependency);
+	}
+
+	dependencies.clear();
+
+	dependents_map[new_obj] = new_dependents;
+	dependencies_map[new_obj] = new_dependencies;
 }
 
 void DependencyManager::EraseObject(CatalogEntry *object) {
