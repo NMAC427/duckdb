@@ -1,0 +1,83 @@
+# name: test/sql/alter/rename_schema/test_rename_schema_cyclic.test
+# description: Schema creation/deletion with transactions
+# group: [rename_schema]
+
+# begin the transactions
+statement ok con1
+BEGIN TRANSACTION
+
+# create a schema with a table
+statement ok con1
+CREATE SCHEMA test;
+
+statement ok con1
+CREATE TABLE test.hello(i INTEGER);
+
+statement ok con1
+ALTER SCHEMA test RENAME TO test_new;
+
+statement ok con1
+DROP TABLE test_new.hello;
+
+statement ok con1
+DROP SCHEMA test_new;
+
+statement ok con1
+COMMIT;
+
+# now work with multiple connections
+# create the same schema
+statement ok con1
+CREATE SCHEMA test;
+
+statement ok con1
+CREATE TABLE test.hello(i INTEGER);
+
+statement ok con1
+INSERT INTO test.hello VALUES (2), (3), (4)
+
+# begin the transactions
+statement ok con1
+BEGIN TRANSACTION
+
+statement ok con2
+BEGIN TRANSACTION
+
+statement ok con1
+ALTER SCHEMA test RENAME TO test_new;
+
+query I con1
+SELECT * FROM test_new.hello
+----
+2
+3
+4
+
+# con1 drops the schema and commits it
+# statement err con1
+# DROP TABLE test.hello;
+
+statement ok con1
+DROP TABLE test_new.hello;
+
+statement ok con1
+DROP SCHEMA test_new;
+
+statement ok con1
+COMMIT;
+
+# con2 queries the schema (should still work)
+query I con2
+SELECT * FROM test.hello
+----
+2
+3
+4
+
+# now con2 finishes the transaction and tries again
+statement ok con2
+ROLLBACK;
+
+statement error con2
+SELECT * FROM test.hello
+

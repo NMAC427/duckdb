@@ -1,5 +1,5 @@
 # name: test/sql/alter/rename_schema/test_rename_schema_and_table.test
-# description: Test RENAME SCHEMA single transaction
+# description: Test RENAME SCHEMA combined with RENAME TABLE in a single transaction
 # group: [rename_schema]
 
 # can't rename schema that doesn't exist
@@ -131,10 +131,6 @@ CREATE SCHEMA s3;
 statement ok
 CREATE SCHEMA s4;
 
-
-
-
-# THIS TEST FAILS FOR SOME REASON
 statement ok
 ALTER TABLE s5.tbl RENAME TO hello2;
 

@@ -350,10 +350,10 @@ unique_ptr<CatalogEntry> SchemaCatalogEntry::Copy(ClientContext &context) {
 void SchemaCatalogEntry::SetAsRoot() {
 	// Revert the schema tables refer to
 	tables->Scan([this](CatalogEntry *entry) {
-        if (entry->type == CatalogType::DELETED_ENTRY) {
-            return;
-        }
-        
+		if (entry->type == CatalogType::DELETED_ENTRY) {
+			return;
+		}
+
 		// Update the schema the tabels refer to
 		auto standard_entry = (StandardEntry *)entry;
 		standard_entry->schema = this;

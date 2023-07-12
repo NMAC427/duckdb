@@ -1,0 +1,28 @@
+# name: test/sql/alter/rename_table/test_rename_table_view.test
+# description: Test RENAME TABLE with a view as entry
+# group: [rename_schema]
+
+statement ok
+CREATE SCHEMA schema
+
+statement ok
+CREATE TABLE schema.tbl(i INTEGER)
+
+statement ok
+INSERT INTO schema.tbl VALUES (999), (100)
+
+statement ok
+CREATE VIEW schema.v1 AS SELECT * FROM schema.tbl
+
+statement ok
+ALTER SCHEMA schema RENAME TO new_schema
+
+# the view references the old schema
+statement error
+SELECT * FROM new_schema.v1
+
+query I
+SELECT * FROM new_schema.tbl
+----
+999
+100
